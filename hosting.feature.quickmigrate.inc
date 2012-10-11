@@ -2,7 +2,7 @@
 /**
  * Implementation of hook_hosting_feature().
  */
-function quickmigrate_hosting_feature() {
+function hosting_quickmigrate_hosting_feature() {
   $features['quickmigrate'] = array(
   // title to display in form
     'title' => t('Quick migrate'),
@@ -11,7 +11,7 @@ function quickmigrate_hosting_feature() {
   // initial status ( HOSTING_FEATURE_DISABLED, HOSTING_FEATURE_ENABLED, HOSTING_FEATURE_REQUIRED )
     'status' => HOSTING_FEATURE_DISABLED,
   // module to enable/disable alongside feature
-    'module' => 'quickmigrate',
+    'module' => 'hosting_quickmigrate',
   // which group to display in ( null , experimental )
     'group' => 'experimental'
   );

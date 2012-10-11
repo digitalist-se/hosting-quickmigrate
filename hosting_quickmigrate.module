@@ -1,0 +1,157 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Main module file for the hosting_quickmigrate aegir frontend.
+ */
+
+/**
+ * Implementation of hook_perm():
+ */
+function hosting_quickmigrate_perm() {
+  return array('administer hosting_quickmigrate');
+}
+
+/**
+ * Implementation of hook_hosting_tasks().
+ */
+function hosting_quickmigrate_hosting_tasks() {
+  $tasks = array();
+  $tasks['site']['quickmigrate'] = array(
+    'title' => t('Quick migrate'),
+    'description' => t('Quick migrate the site.'),
+    'access callback' => 'hosting_quickmigrate_task_access',
+    'dialog' => TRUE,
+  );
+  return $tasks;
+}
+
+/**
+ * Implementation of hook_form().
+ */
+function hosting_task_quickmigrate_form($node) {
+  $node->check_profile_migrations =  TRUE;
+  $valid_options = hosting_site_available_options($node);
+
+  $form['new_uri'] = array (
+    '#title' => t('Domain name'),
+    '#description' => t("Changing the domain name when migrating effectively 'renames' the site."),
+    '#type' => 'textfield',
+    '#required' => TRUE,
+    '#weight' => '-1',
+    '#default_value' => strtolower(trim($node->title))
+  );
+
+  $db_servers = hosting_get_servers('db');
+  if (sizeof($db_servers) > 1) {
+    $form['new_db_server'] = array(
+      '#type' => 'radios',
+      '#title' => t('Database server'),
+      '#required' => TRUE,
+      '#description' => t('The database server the site will use to host its content.'),
+      '#options' => $db_servers,
+      '#default_value' => $node->db_server,
+    );
+  }
+  else {
+    $form['new_db_server'] = array('#type' => 'hidden', '#value' => $node->db_server);
+  }
+
+
+  drupal_add_js(drupal_get_path('module','hosting_migrate') . '/hosting_migrate.js');
+  $packages = array();
+
+  $site_profile = node_load($node->profile);
+
+  $profile_platform_instances = hosting_package_instances_load(
+    array('r.type' => 'platform', 'n.nid' => $node->profile, 'h.status' => HOSTING_PLATFORM_ENABLED));
+
+  // In the list of possible targets, we also include install profiles on platforms that
+  // USED to be named the same as our current install profile. Such as the d6 -> d7 rename
+  // of the default profile to standard.
+  $profile_platform_instances = array_merge($profile_platform_instances, hosting_package_instances_load(
+                                  array('r.type' => 'platform', 'p.old_short_name' => $site_profile->short_name)));
+
+  $site_platform = node_load($node->platform);
+  // Don't show the current platform if it's locked
+  if (!_hosting_platform_is_locked($node->platform)) {
+    $form[$node->platform]['target_platform'] = array(
+      '#type' => 'radio',
+      '#title' => $site_platform->title,
+      "#return_value" => $node->platform,
+      "#default_value" => $node->platform,
+      '#description' => t("Current platform"),
+      '#parents' => array('parameters', 'target_platform'),
+    );
+  }
+  foreach ($profile_platform_instances as $profile_instance) {
+    if (($profile_instance->rid != $node->platform) && (in_array($profile_instance->rid, $valid_options['platform']))) {
+      $status = hosting_package_comparison($node->nid, $profile_instance->iid);
+
+      $description = t("Upgrades: !upgrades, Warnings: !missing, Errors: !errors | <a href='!url' class='hosting-package-comparison-link'>Compare platforms</a>",
+                     array(
+                       '!upgrades' => $status['upgrade'],
+                       '!missing' => $status['missing'] + $status['downgrade'],
+                       '!errors' => $status['error'],
+                       '!url' => url('hosting/migrate/compare/' . $node->nid . '/' . $profile_instance->iid))
+      );
+      $platform = node_load($profile_instance->rid);
+
+      $form[$platform->nid]['target_platform'] = array(
+        '#type' => 'radio',
+        '#title' => $platform->title,
+        '#parents' => array('parameters', 'target_platform'),
+        "#return_value" => $platform->nid,
+        '#description' => $description,
+      );
+      if ($status['error']) {
+        $form[$platform->nid]['target_platform']['#disabled'] = TRUE;
+      }
+
+    }
+  }
+
+  $form['#node'] = $node;
+  return $form;
+}
+
+/**
+ * Implementation of hook_validate().
+ *
+ * A site may be migrated if it's URL, Platform or DB server has changed.
+ * Only one of these needs to change for a valid migration to be possible.
+ */
+function hosting_task_quickmigrate_form_validate($form, &$form_state) {
+  $migrate_possible = false;
+
+  $site = $form['parameters']['#node'];
+
+  $url = strtolower(trim($form_state['values']['parameters']['new_uri'])); // domain names are case-insensitive
+  if ($url != strtolower(trim($site->title))) {
+    $migrate_possible = TRUE;
+    if (!_hosting_valid_fqdn($url)) {
+      form_set_error('title', t("You have not specified a valid url for this site."));
+    }
+    if (hosting_site_exists($url)) {
+      form_set_error('title', t("The domain name you have specified is not unique."));
+    }
+  }
+
+  if ($form_state['values']['parameters']['target_platform'] != $site->platform) {
+    $migrate_possible = TRUE;
+  }
+  if ($form_state['values']['parameters']['new_db_server'] != $site->db_server) {
+    $migrate_possible = TRUE;
+  }
+  if (!$migrate_possible) {
+    form_set_error('parameters][target_platform', t("To migrate a site you need to modify at least one of the following fields: Domain name, Platform or Database server"));
+  }
+}
+
+/**
+ * Access callback for quickmigrate
+ */
+function hosting_quickmigrate_task_access($node, $task) {
+  return TRUE;
+}
