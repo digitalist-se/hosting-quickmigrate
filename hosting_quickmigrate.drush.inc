@@ -21,10 +21,6 @@ function drush_hosting_quickmigrate_pre_hosting_task($task) {
       $task->args[3] = '@' . strtolower(trim($task->task_args['new_uri']));
     }
 
-    if ($site->db_server != $task->task_args['new_db_server']) {
-      $task->options['new_db_server'] = hosting_context_name($task->task_args['new_db_server']);
-    }
-
     $profile_instance = _hosting_migrate_get_target_profile_name($task);
     if (sizeof($profile_instance)) {
       $task->options['profile'] = $profile_instance->short_name;

@@ -43,22 +43,6 @@ function hosting_task_quickmigrate_form($node) {
     '#default_value' => strtolower(trim($node->title))
   );
 
-  $db_servers = hosting_get_servers('db');
-  if (sizeof($db_servers) > 1) {
-    $form['new_db_server'] = array(
-      '#type' => 'radios',
-      '#title' => t('Database server'),
-      '#required' => TRUE,
-      '#description' => t('The database server the site will use to host its content.'),
-      '#options' => $db_servers,
-      '#default_value' => $node->db_server,
-    );
-  }
-  else {
-    $form['new_db_server'] = array('#type' => 'hidden', '#value' => $node->db_server);
-  }
-
-
   drupal_add_js(drupal_get_path('module','hosting_migrate') . '/hosting_migrate.js');
   $packages = array();
 
@@ -74,17 +58,6 @@ function hosting_task_quickmigrate_form($node) {
                                   array('r.type' => 'platform', 'p.old_short_name' => $site_profile->short_name)));
 
   $site_platform = node_load($node->platform);
-  // Don't show the current platform if it's locked
-  if (!_hosting_platform_is_locked($node->platform)) {
-    $form[$node->platform]['target_platform'] = array(
-      '#type' => 'radio',
-      '#title' => $site_platform->title,
-      "#return_value" => $node->platform,
-      "#default_value" => $node->platform,
-      '#description' => t("Current platform"),
-      '#parents' => array('parameters', 'target_platform'),
-    );
-  }
   foreach ($profile_platform_instances as $profile_instance) {
     if (($profile_instance->rid != $node->platform) && (in_array($profile_instance->rid, $valid_options['platform']))) {
       $status = hosting_package_comparison($node->nid, $profile_instance->iid);
@@ -139,9 +112,6 @@ function hosting_task_quickmigrate_form_validate($form, &$form_state) {
   }
 
   if ($form_state['values']['parameters']['target_platform'] != $site->platform) {
-    $migrate_possible = TRUE;
-  }
-  if ($form_state['values']['parameters']['new_db_server'] != $site->db_server) {
     $migrate_possible = TRUE;
   }
   if (!$migrate_possible) {
