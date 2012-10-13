@@ -31,7 +31,10 @@ Quick migrate does things a bit differently:
 * Move the files directory back to the new site folder
 * Delete the old site folder on the web front(s).
 
-The files directory is never backed up to the hostmaster, which saves a LOT of time when doing the migrate.
+The files directory is never backed up to the hostmaster, which saves a LOT of time when doing the migrate. There is a few things to note though:
+
+* You **can't** move sites from different servers this way. If you need to do that, you need to use the normal migrate process.
+* Files are not backed up. Use another means of backing data up!
 
 # Installation
 Put this module into your sites/all/modules folder of your hostmaster. You will also have to install the companion [drush plugin](http://github.com/nodeone/drush-quickmigrate).
