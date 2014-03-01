@@ -1,6 +1,5 @@
-
-name = Vnodectrl
-description = Let's you set up new cloud server instances through libcloud.
+name = Quick migrate
+description = Quicker migration.
 core = 6.x
 package = Hosting
 dependencies[] = hosting
