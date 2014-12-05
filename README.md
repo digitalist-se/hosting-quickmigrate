@@ -37,5 +37,5 @@ The files directory is never backed up to the hostmaster, which saves a LOT of t
 * Files are not backed up. Use another means of backing data up!
 
 # Installation
-Put this module into your sites/all/modules folder of your hostmaster. You will also have to install the companion [drush plugin](http://github.com/nodeone/drush-quickmigrate).
+Put this module into your sites/all/modules folder of your hostmaster. You will also have to install the companion [provision plugin](http://github.com/nodeone/provision-quickmigrate).
 
