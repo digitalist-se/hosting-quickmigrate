@@ -75,7 +75,8 @@ function hosting_task_quickmigrate_form($node) {
         '#type' => 'radio',
         '#title' => $platform->title,
         '#parents' => array('parameters', 'target_platform'),
-        "#return_value" => $platform->nid,
+        '#default_value' => $platform->nid,
+        '#return_value' => $platform->nid,
         '#description' => $description,
       );
       if ($status['error']) {
